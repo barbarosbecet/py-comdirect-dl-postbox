@@ -3,7 +3,7 @@
 This is a simple python script to download your entire comdirect bank Postbox through comdirect API.
 Details of comdirect API documentation can be found [here](https://developer.comdirect.de/).
 
-Use at your own risk! I can't be held responsible from any damage, theft or charges to your account. 
+Use at your own risk! I can't be held responsible of any damage, theft or charges to your account. 
 
 Be warned, that there are potential cases that your account might incur charges from comdirect bank.
 Some examples are:
