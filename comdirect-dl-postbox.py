@@ -20,8 +20,15 @@ client_secret = creds['client_secret']
 zugangsnummer = creds['zugangsnummer']
 pin = creds['pin']
 
-api_url = 'https://api.comdirect.de/api'
+# preferred TAN selection: 
+# ''           -> Use your default
+# 'P_TAN_PUSH' -> Use photoTAN-Push, approve notification, no input required
+# 'P_TAN'      -> Use photoTAN, get QR code on computer, scan with camera, input TAN
+# 'M_TAN'      -> Use mTAN (might get charged!), receive SMS, input TAN
+preferred_tan = creds.get('tan_verfahren', '')
+
 base_url = 'https://api.comdirect.de'
+api_url = f'{base_url}/api'
 
 def get_request_id() -> str:
     now_ms = str(int(datetime.now().timestamp() * 1000.))
@@ -133,29 +140,65 @@ tan_info = json.loads(response_headers['x-once-authentication-info'])
 
 pretty_print_dict(tan_info)
 
-assert(all(item in tan_info.keys() for item in ['id', 'typ'])), 'TAN info missing id and typ'
+assert(all(item in tan_info.keys() for item in ['id', 'typ', 'availableTypes'])), 'TAN info missing data'
 
 challenge_id = tan_info['id']
 challenge_type = tan_info['typ']
+challenge = tan_info.get('challenge', '')
 
-supported_tan = ['P_TAN_PUSH', 'P_TAN', 'P_TAN_APP']
+# switch TAN method if necessary
+if preferred_tan and preferred_tan != tan_info['typ'] and preferred_tan in tan_info['availableTypes']:
+    step = 'Step 2.3 repeat: Switch TAN method'
+    request_id = get_request_id()
+    headers['x-http-request-info'] = f'{{"clientRequestId":{{"sessionId":"{session_id}","requestId":"{request_id}"}}}}'
+    headers['x-once-authentication-info'] = f'{{"typ":"{preferred_tan}"}}'
+
+    print(f'Sending request: {step}')
+
+    response = requests.request(
+        'POST',
+        api_url+f'/session/clients/user/v1/sessions/{sessionUUID}/validate',
+        headers=headers,
+        data=payload)
+
+    process_response(response, step)
+    response_json = response.json()
+    response_headers = response.headers
+    assert(response_json['sessionTanActive'] == True), 'sessionTanActive not true'
+    assert('x-once-authentication-info' in response_headers.keys()), 'x-once-authentication-info header missing'
+    tan_info = json.loads(response_headers['x-once-authentication-info'])
+    assert(all(item in tan_info.keys() for item in ['id', 'typ', 'availableTypes'])), 'TAN info missing data'
+    challenge_id = tan_info['id']
+    challenge_type = tan_info['typ']
+    challenge = tan_info.get('challenge', '')
+
+supported_tan = ['P_TAN_PUSH', 'P_TAN', 'M_TAN']
 
 assert(challenge_type in supported_tan), f'Unsupported TAN type. Supported: {supported_tan}'
 
 print(f'Using 2FA type: {challenge_type}')
 
-if challenge_type in ['P_TAN', 'P_TAN_APP']:
+tan = ''
+
+if challenge_type == 'P_TAN':
     # Need to show photoTAN challenge QR code here
-    assert('challenge' in tan_info.keys()), 'Challenge missing'
+    assert(challenge), 'Challenge missing'
     filename = f'phototan_{request_id}.png'
     print(f'Saving photoTAN challenge QR code in {filename}')
-    png_bytes = base64.b64decode(tan_info['challenge'])
+    png_bytes = base64.b64decode(challenge)
     with open(filename, 'wb') as f:
         f.write(png_bytes)
     os.startfile(filename)
-
-print('Use your photoTAN app to solve the photoTAN challenge!')
-input('Press Enter to continue once photoTAN is solved...')
+    print('Use your photoTAN app to solve the photoTAN challenge and ...')
+    tan = input('Please enter TAN: ')
+elif challenge_type == 'M_TAN':
+    # Need to get the SMS TAN input here
+    assert(challenge), 'Challenge missing'
+    print(f'Check for SMSes on phone number "{challenge}"" and ...')
+    tan = input('Please enter TAN: ')
+elif challenge_type == 'P_TAN_PUSH':
+    print('Use your photoTAN app to solve the photoTAN challenge')
+    input('Press Enter to continue once photoTAN is solved...')
 
 ### Step 2.4 Activate session-TAN
 
@@ -174,7 +217,7 @@ headers = {
     'Content-Type': 'application/json',
     'Authorization': f'Bearer {access_token}',
     'x-once-authentication-info': f'{{"id":"{challenge_id}"}}',
-    'x-once-authentication': '', # filled for mTAN by the user
+    'x-once-authentication': tan,
 }
 
 print(f'Sending request: {step}')
@@ -308,7 +351,8 @@ for item in documents:
     file_ext = file_extension_map.get(item['mimeType'], '.txt')
     valid_name = re.sub(r'[^\w\-_\. ]', '_', document_name)
     full_path = os.path.join(directory_to_save, f'{date_creation}_{valid_name}'+file_ext)
-    with open(full_path, 'wb') as f:
-        f.write(response.content)
+    if not os.path.exists(full_path):
+        with open(full_path, 'wb') as f:
+            f.write(response.content)
 
 print('Done!')
