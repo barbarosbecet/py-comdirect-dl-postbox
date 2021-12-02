@@ -1,13 +1,17 @@
 ## comdirect-dl-postbox
 
 This is a simple python script to download your entire comdirect bank Postbox through comdirect API.
-Details of comdirect API documentation is on [here](https://developer.comdirect.de/).
+Details of comdirect API documentation can be found [here](https://developer.comdirect.de/).
 
-Use at your own risk! I can't be held responsible from any charges to your account. 
-Be warned, that there are potential cases that your account might get charged:
-- mTAN 2FA per sent SMS
-- Online Banking access being blocked
-- maybe more...
+Use at your own risk! I can't be held responsible from any damage, theft or charges to your account. 
+
+Be warned, that there are potential cases that your account might incur charges from comdirect bank.
+Some examples are:
+- mobileTAN, per sent SMS
+- Online banking access getting blocked, after requesting too many or entering too many TANs
+- could be more as comdirect AGB (Terms) change
+
+All these potential charges are the responsibility of the user, account owner or user of this piece of software.
 
 ## Usage
 
@@ -23,4 +27,4 @@ Be warned, that there are potential cases that your account might get charged:
 ```
 
 - Run the script: `python comdirect-dl-postbox.py`
-    -- Pay attention to TAN process (and input TAN when necessary)
+  - Pay attention to TAN process (and input TAN when asked)
