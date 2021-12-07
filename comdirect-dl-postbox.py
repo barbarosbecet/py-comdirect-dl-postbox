@@ -52,7 +52,13 @@ session_id = str(uuid.uuid4()).replace('-', '')
 step = '2.1 Oauth2 token initial generation'
 request_id = get_request_id()
 
-payload = f'client_id={client_id}&client_secret={client_secret}&grant_type=password&username={zugangsnummer}&password={pin}'
+payload = {
+    'client_id' : f'{client_id}',
+    'client_secret' : f'{client_secret}',
+    'grant_type' : 'password',
+    'username' : f'{zugangsnummer}',
+    'password' : f'{pin}'
+}
 
 headers = {
     'x-http-request-info': f'{{"clientRequestId":{{"sessionId":"{session_id}","requestId":"{request_id}"}}}}',
