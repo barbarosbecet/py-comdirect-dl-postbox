@@ -328,6 +328,14 @@ for item in documents:
     document_name = item['name']
     date_creation = item['dateCreation']
 
+    file_ext = file_extension_map.get(item['mimeType'], '.txt')
+    valid_name = re.sub(r'[^\w\-_\. ]', '_', document_name)
+    full_path = os.path.join(directory_to_save, f'{date_creation}_{valid_name}'+file_ext)
+
+    if os.path.exists(full_path):
+        print(f'Skipping existing file "{document_name}" with id {document_id}, created {date_creation}')
+        continue
+
     print(f'Downloading file "{document_name}" with id {document_id}, created {date_creation}')
 
     request_id = get_request_id()
@@ -347,12 +355,8 @@ for item in documents:
     if response.status_code != 200:
         print(response.text)
         continue
-    
-    file_ext = file_extension_map.get(item['mimeType'], '.txt')
-    valid_name = re.sub(r'[^\w\-_\. ]', '_', document_name)
-    full_path = os.path.join(directory_to_save, f'{date_creation}_{valid_name}'+file_ext)
-    if not os.path.exists(full_path):
-        with open(full_path, 'wb') as f:
-            f.write(response.content)
+
+    with open(full_path, 'wb') as f:
+        f.write(response.content)
 
 print('Done!')
