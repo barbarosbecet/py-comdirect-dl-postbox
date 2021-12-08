@@ -37,12 +37,14 @@ def get_request_id() -> str:
 def pretty_print_dict(dict) -> None:
     print(json.dumps(dict, indent=2, default=str))
 
-def process_response(response, step) -> None:
+def process_response(response, step, verbose = False) -> None:
     if response.status_code in [200, 201]:
         print(f'{step}: SUCCESS')
-        pretty_print_dict(response.json())
+        if verbose:
+            pretty_print_dict(response.json())
     else:
-        print(response.text)
+        if verbose:
+            print(response.text)
         response.raise_for_status()
 
 session_id = str(uuid.uuid4()).replace('-', '')
@@ -68,8 +70,7 @@ headers = {
 
 print(f'Sending request: {step}')
 
-response = requests.request(
-    'POST', base_url+'/oauth/token', headers=headers, data=payload)
+response = requests.post(base_url+'/oauth/token', headers=headers, data=payload)
 
 process_response(response, step)
 
@@ -95,10 +96,7 @@ headers = {
 
 print(f'Sending request: {step}')
 
-response = requests.request(
-    'GET',
-    api_url+'/session/clients/user/v1/sessions',
-    headers=headers)
+response = requests.get(api_url+'/session/clients/user/v1/sessions', headers=headers)
 
 process_response(response, step)
 
@@ -128,8 +126,7 @@ headers = {
 
 print(f'Sending request: {step}')
 
-response = requests.request(
-    'POST',
+response = requests.post(
     api_url+f'/session/clients/user/v1/sessions/{sessionUUID}/validate',
     headers=headers,
     data=payload)
@@ -161,8 +158,7 @@ if preferred_tan and preferred_tan != tan_info['typ'] and preferred_tan in tan_i
 
     print(f'Sending request: {step}')
 
-    response = requests.request(
-        'POST',
+    response = requests.post(
         api_url+f'/session/clients/user/v1/sessions/{sessionUUID}/validate',
         headers=headers,
         data=payload)
@@ -228,8 +224,7 @@ headers = {
 
 print(f'Sending request: {step}')
 
-response = requests.request(
-    'PATCH',
+response = requests.patch(
     api_url+f'/session/clients/user/v1/sessions/{sessionUUID}',
     headers=headers,
     data=payload)
@@ -258,8 +253,7 @@ headers = {
 
 print(f'Sending request: {step}')
 
-response = requests.request(
-    'POST', base_url+'/oauth/token', headers=headers, data=payload)
+response = requests.post(base_url+'/oauth/token', headers=headers, data=payload)
 
 process_response(response, step)
 
@@ -281,7 +275,7 @@ print(f'expires at: {expiry_time}')
 
 ### Step 9.1.1 Get PostBox Documents
 
-step = '9.1.1 Get PostBox Documents'
+step = '9.1.1 Get PostBox Documents Metadata'
 
 print(f'Sending requests: {step}')
 
@@ -299,12 +293,11 @@ while True:
     index = len(documents)
     paging_count = 50
 
-    response = requests.request(
-        'GET',
+    response = requests.get(
         api_url+f'/messages/clients/user/v2/documents?paging-first={index}&paging-count={paging_count}',
         headers=headers)
 
-    process_response(response, step)
+    process_response(response, step + f': {index}')
 
     response_json = response.json()
 
@@ -353,8 +346,7 @@ for item in documents:
         'Authorization': f'Bearer {access_token}',
     }
 
-    response = requests.request(
-        'GET',
+    response = requests.get(
         api_url+f'/messages/v2/documents/{document_id}',
         headers=headers)
 
